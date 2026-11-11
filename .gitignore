@@ -6,6 +6,7 @@ coverage
 !.env.example
 *.log
 .DS_Store
+.idea
 .tanstack
 .expo
 expo-env.d.ts
