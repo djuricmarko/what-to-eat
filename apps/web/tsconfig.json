@@ -1,0 +1,8 @@
+{
+  "extends": "@wte/tsconfig/react.json",
+  "compilerOptions": {
+    "customConditions": ["@wte/source"],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src", "vite.config.ts"]
+}

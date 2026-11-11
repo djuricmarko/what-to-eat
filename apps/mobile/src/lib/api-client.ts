@@ -1,0 +1,41 @@
+import type { ErrorResponse } from '@wte/shared';
+import { config } from './config';
+
+// Same contract as apps/web/src/lib/api-client.ts. Auth will add the Better Auth Expo
+// client (session cookie kept in expo-secure-store) and send it with each request.
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+    public readonly details?: unknown,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${config.apiUrl}/api${path}`, {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (res.status === 204) return undefined as T;
+  const data: unknown = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = (data as ErrorResponse | null)?.error;
+    throw new ApiError(res.status, err?.code ?? 'UNKNOWN', err?.message ?? res.statusText, err?.details);
+  }
+  return data as T;
+}
+
+export const api = {
+  get: <T>(path: string) => request<T>('GET', path),
+  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
+  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
+  patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
+  delete: <T>(path: string) => request<T>('DELETE', path),
+};

@@ -1,0 +1,9 @@
+{
+  "extends": "@wte/tsconfig/node.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "customConditions": ["@wte/source"]
+  },
+  "include": ["src", "drizzle.config.ts", "vitest.config.ts"]
+}

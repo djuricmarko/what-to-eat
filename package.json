@@ -1,0 +1,37 @@
+{
+  "name": "what-to-eat",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.24.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @wte/api --filter @wte/web dev",
+    "dev:api": "pnpm --filter @wte/api dev",
+    "dev:web": "pnpm --filter @wte/web dev",
+    "dev:mobile": "pnpm --filter @wte/mobile start",
+    "build": "pnpm -r build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:generate": "pnpm --filter @wte/api db:generate",
+    "db:migrate": "pnpm --filter @wte/api db:migrate",
+    "db:seed": "pnpm --filter @wte/api db:seed"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "@wte/tsconfig": "workspace:*",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  }
+}
