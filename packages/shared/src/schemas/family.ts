@@ -4,14 +4,16 @@ import { roleSchema, userSummarySchema } from './common.js';
 /** HH:mm, 24h clock */
 export const timeOfDaySchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:mm');
 
-export const timezoneSchema = z.string().refine((tz) => {
+function isValidTimezone(timezone: string) {
   try {
-    new Intl.DateTimeFormat('en', { timeZone: tz });
+    new Intl.DateTimeFormat('en', { timeZone: timezone });
     return true;
   } catch {
     return false;
   }
-}, 'Invalid timezone');
+}
+
+export const timezoneSchema = z.string().refine(isValidTimezone, 'Invalid timezone');
 
 export const INVITE_CODE_LENGTH = 8;
 export const inviteCodeSchema = z

@@ -14,26 +14,52 @@ export class ApiError extends Error {
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
+async function readJson(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function toApiError(response: Response, payload: unknown) {
+  const error = (payload as ErrorResponse | null)?.error;
+  const code = error?.code ?? 'UNKNOWN';
+  const message = error?.message ?? response.statusText;
+  return new ApiError(response.status, code, message, error?.details);
+}
+
 async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const hasBody = body !== undefined;
+  const response = await fetch(`/api${path}`, {
     method,
     credentials: 'include',
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
+    body: hasBody ? JSON.stringify(body) : undefined,
   });
-  if (res.status === 204) return undefined as T;
-  const data: unknown = await res.json().catch(() => null);
-  if (!res.ok) {
-    const err = (data as ErrorResponse | null)?.error;
-    throw new ApiError(res.status, err?.code ?? 'UNKNOWN', err?.message ?? res.statusText, err?.details);
-  }
-  return data as T;
+
+  if (response.status === 204) return undefined as T;
+
+  const payload = await readJson(response);
+  if (!response.ok) throw toApiError(response, payload);
+
+  return payload as T;
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>('GET', path),
-  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
-  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
-  patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
-  delete: <T>(path: string) => request<T>('DELETE', path),
+  get<T>(path: string) {
+    return request<T>('GET', path);
+  },
+  post<T>(path: string, body?: unknown) {
+    return request<T>('POST', path, body);
+  },
+  put<T>(path: string, body?: unknown) {
+    return request<T>('PUT', path, body);
+  },
+  patch<T>(path: string, body?: unknown) {
+    return request<T>('PATCH', path, body);
+  },
+  delete<T>(path: string) {
+    return request<T>('DELETE', path);
+  },
 };

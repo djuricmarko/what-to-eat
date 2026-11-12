@@ -4,25 +4,33 @@ const path = require('node:path');
 const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
-const packagesDir = path.resolve(__dirname, '../../packages') + path.sep;
+const workspacePackagesDir = path.resolve(__dirname, '../../packages') + path.sep;
+const defaultConditionNames = config.resolver.unstable_conditionNames ?? ['require', 'import'];
+const JS_EXTENSION = '.js';
 
-// 1. Pick the "@wte/source" export condition (points at src/index.ts).
-config.resolver.unstable_conditionNames = [
-  '@wte/source',
-  ...(config.resolver.unstable_conditionNames ?? ['require', 'import']),
-];
+function isRelativeJsImportFromWorkspacePackage(context, moduleName) {
+  const isRelativeJsImport = moduleName.startsWith('.') && moduleName.endsWith(JS_EXTENSION);
+  const isImportedFromWorkspacePackage = context.originModulePath.startsWith(workspacePackagesDir);
+  return isRelativeJsImport && isImportedFromWorkspacePackage;
+}
 
-// 2. Workspace sources use NodeNext-style "./file.js" specifiers for .ts files; Metro
-//    doesn't remap those, so retry without the extension.
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName.startsWith('.') && moduleName.endsWith('.js') && context.originModulePath.startsWith(packagesDir)) {
+function resolveWorkspaceRequest(context, moduleName, platform) {
+  if (isRelativeJsImportFromWorkspacePackage(context, moduleName)) {
+    const moduleNameWithoutExtension = moduleName.slice(0, -JS_EXTENSION.length);
     try {
-      return context.resolveRequest(context, moduleName.slice(0, -3), platform);
+      return context.resolveRequest(context, moduleNameWithoutExtension, platform);
     } catch {
       // fall through to the default resolution
     }
   }
   return context.resolveRequest(context, moduleName, platform);
-};
+}
+
+// 1. Pick the "@wte/source" export condition (points at src/index.ts).
+config.resolver.unstable_conditionNames = ['@wte/source', ...defaultConditionNames];
+
+// 2. Workspace sources use NodeNext-style "./file.js" specifiers for .ts files; Metro
+//    doesn't remap those, so retry without the extension.
+config.resolver.resolveRequest = resolveWorkspaceRequest;
 
 module.exports = config;

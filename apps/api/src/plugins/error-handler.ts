@@ -1,36 +1,38 @@
+import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import type { FastifyError } from 'fastify';
 import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
 import { AppError } from '../lib/errors.js';
 
-export default fp(
-  async (app) => {
-    app.setErrorHandler<FastifyError>((err, request, reply) => {
-      if (hasZodFastifySchemaValidationErrors(err)) {
-        return reply.status(400).send({
-          error: { code: 'VALIDATION_ERROR', message: 'Invalid request', details: err.validation },
-        });
-      }
-      if (err instanceof AppError) {
-        return reply.status(err.statusCode).send({
-          error: { code: err.code, message: err.message, details: err.details },
-        });
-      }
-      const status = err.statusCode ?? 500;
-      if (status >= 500) request.log.error(err);
-      return reply.status(status).send({
-        error: {
-          code: err.code ?? 'INTERNAL_ERROR',
-          message: status >= 500 ? 'Something went wrong' : err.message,
-        },
-      });
-    });
+function errorBody(code: string, message: string, details?: unknown) {
+  return { error: { code, message, details } };
+}
 
-    app.setNotFoundHandler((request, reply) =>
-      reply.status(404).send({
-        error: { code: 'NOT_FOUND', message: `Route ${request.method} ${request.url} not found` },
-      }),
-    );
-  },
-  { name: 'error-handler' },
-);
+function handleError(error: FastifyError, request: FastifyRequest, reply: FastifyReply) {
+  if (hasZodFastifySchemaValidationErrors(error)) {
+    return reply.status(400).send(errorBody('VALIDATION_ERROR', 'Invalid request', error.validation));
+  }
+
+  if (error instanceof AppError) {
+    return reply.status(error.statusCode).send(errorBody(error.code, error.message, error.details));
+  }
+
+  const statusCode = error.statusCode ?? 500;
+  const isServerError = statusCode >= 500;
+  if (isServerError) request.log.error(error);
+
+  const code = error.code ?? 'INTERNAL_ERROR';
+  const message = isServerError ? 'Something went wrong' : error.message;
+  return reply.status(statusCode).send(errorBody(code, message));
+}
+
+function handleNotFound(request: FastifyRequest, reply: FastifyReply) {
+  const message = `Route ${request.method} ${request.url} not found`;
+  return reply.status(404).send(errorBody('NOT_FOUND', message));
+}
+
+async function errorHandlerPlugin(app: FastifyInstance) {
+  app.setErrorHandler(handleError);
+  app.setNotFoundHandler(handleNotFound);
+}
+
+export default fp(errorHandlerPlugin, { name: 'error-handler' });

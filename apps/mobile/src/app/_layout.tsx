@@ -5,10 +5,12 @@ import { useColorScheme } from 'react-native';
 import { queryClient } from '@/lib/query-client';
 
 export default function RootLayout() {
-  const scheme = useColorScheme();
+  const isDarkMode = useColorScheme() === 'dark';
+  const navigationTheme = isDarkMode ? DarkTheme : DefaultTheme;
+
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={navigationTheme}>
         <Stack screenOptions={{ headerShown: false }} />
         <StatusBar style="auto" />
       </ThemeProvider>

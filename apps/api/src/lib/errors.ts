@@ -10,8 +10,22 @@ export class AppError extends Error {
   }
 }
 
-export const badRequest = (message: string, details?: unknown) => new AppError(400, 'BAD_REQUEST', message, details);
-export const unauthorized = (message = 'Authentication required') => new AppError(401, 'UNAUTHORIZED', message);
-export const forbidden = (message = 'Forbidden', code = 'FORBIDDEN') => new AppError(403, code, message);
-export const notFound = (what = 'Resource') => new AppError(404, 'NOT_FOUND', `${what} not found`);
-export const conflict = (message: string, code = 'CONFLICT') => new AppError(409, code, message);
+export function badRequest(message: string, details?: unknown) {
+  return new AppError(400, 'BAD_REQUEST', message, details);
+}
+
+export function unauthorized(message = 'Authentication required') {
+  return new AppError(401, 'UNAUTHORIZED', message);
+}
+
+export function forbidden(message = 'Forbidden', code = 'FORBIDDEN') {
+  return new AppError(403, code, message);
+}
+
+export function notFound(resourceName = 'Resource') {
+  return new AppError(404, 'NOT_FOUND', `${resourceName} not found`);
+}
+
+export function conflict(message: string, code = 'CONFLICT') {
+  return new AppError(409, code, message);
+}

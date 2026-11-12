@@ -6,37 +6,55 @@ export interface ParsedVideoUrl {
   id: string;
 }
 
-const YT_ID = /^[\w-]{11}$/;
-const IG_CODE = /^[\w-]+$/;
+const YOUTUBE_ID_PATTERN = /^[\w-]{11}$/;
+const INSTAGRAM_SHORTCODE_PATTERN = /^[\w-]+$/;
+const SUBDOMAIN_PREFIX_PATTERN = /^(www\.|m\.)/;
 
-/** Accepts YouTube (watch, youtu.be, shorts) and Instagram (p, reel) links; returns null otherwise. */
-export function parseVideoUrl(input: string): ParsedVideoUrl | null {
+function toHttpUrl(input: string): URL | null {
   let url: URL;
   try {
     url = new URL(input.trim());
   } catch {
     return null;
   }
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-  const host = url.hostname.replace(/^(www\.|m\.)/, '');
-  const parts = url.pathname.split('/').filter(Boolean);
 
-  let ytId: string | undefined;
-  if (host === 'youtube.com') {
-    if (parts[0] === 'watch') ytId = url.searchParams.get('v') ?? undefined;
-    else if (parts[0] === 'shorts') ytId = parts[1];
-  } else if (host === 'youtu.be') {
-    ytId = parts[0];
-  }
-  if (ytId !== undefined) {
-    return YT_ID.test(ytId) ? { platform: 'youtube', id: ytId, url: `https://www.youtube.com/watch?v=${ytId}` } : null;
-  }
+  const isHttp = url.protocol === 'https:' || url.protocol === 'http:';
+  return isHttp ? url : null;
+}
 
-  if (host === 'instagram.com' && (parts[0] === 'p' || parts[0] === 'reel') && parts[1]) {
-    const code = parts[1];
-    return IG_CODE.test(code)
-      ? { platform: 'instagram', id: code, url: `https://www.instagram.com/${parts[0]}/${code}/` }
-      : null;
-  }
+function findYoutubeId(url: URL, host: string, pathSegments: string[]): string | undefined {
+  if (host === 'youtu.be') return pathSegments[0];
+
+  const [pageType, shortsId] = pathSegments;
+  if (pageType === 'watch') return url.searchParams.get('v') ?? undefined;
+  if (pageType === 'shorts') return shortsId;
+  return undefined;
+}
+
+function parseYoutubeUrl(url: URL, host: string, pathSegments: string[]): ParsedVideoUrl | null {
+  const id = findYoutubeId(url, host, pathSegments);
+  if (id === undefined || !YOUTUBE_ID_PATTERN.test(id)) return null;
+
+  return { platform: 'youtube', id, url: `https://www.youtube.com/watch?v=${id}` };
+}
+
+function parseInstagramUrl(pathSegments: string[]): ParsedVideoUrl | null {
+  const [postType, shortcode] = pathSegments;
+  const isPostOrReel = postType === 'p' || postType === 'reel';
+  if (!isPostOrReel || !shortcode || !INSTAGRAM_SHORTCODE_PATTERN.test(shortcode)) return null;
+
+  return { platform: 'instagram', id: shortcode, url: `https://www.instagram.com/${postType}/${shortcode}/` };
+}
+
+/** Accepts YouTube (watch, youtu.be, shorts) and Instagram (p, reel) links; returns null otherwise. */
+export function parseVideoUrl(input: string): ParsedVideoUrl | null {
+  const url = toHttpUrl(input);
+  if (url === null) return null;
+
+  const host = url.hostname.replace(SUBDOMAIN_PREFIX_PATTERN, '');
+  const pathSegments = url.pathname.split('/').filter(Boolean);
+
+  if (host === 'youtube.com' || host === 'youtu.be') return parseYoutubeUrl(url, host, pathSegments);
+  if (host === 'instagram.com') return parseInstagramUrl(pathSegments);
   return null;
 }

@@ -6,10 +6,14 @@ export const difficultySchema = z.enum(['easy', 'medium', 'hard']);
 export const videoPlatformSchema = z.enum(['youtube', 'instagram']);
 export type VideoPlatform = z.infer<typeof videoPlatformSchema>;
 
+function isSupportedVideoUrl(value: string) {
+  return parseVideoUrl(value) !== null;
+}
+
 export const videoUrlSchema = z
   .string()
   .trim()
-  .refine((v) => parseVideoUrl(v) !== null, 'Only YouTube or Instagram video links are supported');
+  .refine(isSupportedVideoUrl, 'Only YouTube or Instagram video links are supported');
 
 export const ingredientInputSchema = z.object({
   name: z.string().trim().min(1).max(120),

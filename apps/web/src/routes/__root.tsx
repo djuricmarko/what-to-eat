@@ -6,11 +6,13 @@ export interface RouterContext {
   queryClient: QueryClient;
 }
 
-export const Route = createRootRouteWithContext<RouterContext>()({
-  component: () => (
+export const Route = createRootRouteWithContext<RouterContext>()({ component: RootLayout });
+
+function RootLayout() {
+  return (
     <>
       <Outlet />
       <Toaster richColors position="top-center" />
     </>
-  ),
-});
+  );
+}
